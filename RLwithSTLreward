@@ -1,1 +1,165 @@
-print('Hello')
+import numpy as np
+import random
+import matplotlib.pyplot as plt
+import matplotlib
+import rtamt
+
+grid_size = 6
+
+# stl initialize
+spec_goal = rtamt.StlDiscreteTimeSpecification()
+spec_goal.name = 'STL_goal'
+spec_goal.declare_var('x', 'float')
+spec_goal.declare_var('y', 'float')
+spec_obs = rtamt.StlDiscreteTimeSpecification()
+spec_obs.name = 'STL_obstacle'
+spec_obs.declare_var('x', 'float')
+spec_obs.declare_var('y', 'float')
+
+# Specification
+spec_goal.spec = 'x>=4 & y>=4' #specification representing the goal location
+spec_obs.spec = '(x>=1 & x < 5 & y >= 2 & y < 3) or (x > 3 & x <= 4 & y > 2 & y <= 3)' #specification representing the obstacle location
+
+def robustness(spec,current_state):
+    pos = {'time': [0,1], 'x': [current_state[0],0], 'y': [current_state[1],0]}
+    spec.parse()
+    rob = spec.evaluate(pos)
+    return rob[0][1]
+    
+def state_transition(current_state, action):
+    
+    if action == (0,-1):#down
+        suggested_state = (current_state[0] + action[0], max(0,current_state[1] + action[1]))
+    elif action == (0,1):#up
+        suggested_state = (current_state[0] + action[0], min(5,current_state[1] + action[1]))
+    elif action ==(-1,0):#left
+        suggested_state = (max(0,current_state[0] + action[0]), current_state[1] + action[1])
+    elif action == (1,0):#right
+        suggested_state = (min(5,current_state[0] + action[0]), current_state[1] + action[1])
+    
+    # up, down,right, left
+    states = [(current_state[0] + 0, min(5,current_state[1] + 1)), (current_state[0] + 0, max(0,current_state[1]  - 1)), ((min(5,current_state[0] + 1), current_state[1] + 0)) ,(max(0,current_state[0] -1), current_state[1] + 0)]
+   
+    
+    num_states = len(states)
+    transition_probabilities = [0.8 if state == suggested_state else (0.2/(num_states-1)) for state in states]
+    next_state = random.choices(states,weights=transition_probabilities) 
+    return next_state[0]
+
+
+# Define the actions
+actions = [(0, 1), (0, -1), (1, 0), (-1, 0)]  # up, down,right, left
+
+# Initialize Q-table
+Q = np.zeros((grid_size, grid_size, len(actions)))
+
+# Define the training parameters
+alpha = 0.1
+gamma = 0.9
+epsilon = 0.9
+max_steps = 1000
+num_episodes = 1000
+decay_rate = -0.005
+
+# Train the agent
+for episode in range(num_episodes):
+    print(episode)
+    # Initialize the state
+    current_state = (0,0)
+    epsilon = np.exp(decay_rate*episode)
+    
+    # Terminate the episode if the agent reaches the goal or the maximum number of steps is reached
+    for step in range(max_steps):
+        print(step)
+        # Choose an action using epsilon-greedy exploration
+        if random.uniform(0, 1) < epsilon: #explore
+            action = random.choice(actions)
+        else:
+            action = actions[np.argmax(Q[current_state[0], current_state[1]])] #exploit
+                              
+        # Determine the next state following the transition probablities        
+        next_state = state_transition(current_state,action)
+        
+        ################### STL Rewrad ##################
+        rob_goal = robustness(spec_goal, next_state)
+        rob_obs = robustness(spec_obs, next_state)
+   
+        if rob_obs >=0:
+            reward = rob_goal -100
+            next_state = current_state
+        elif rob_goal >=0:
+            reward = rob_goal + 100
+        else:
+            reward = rob_goal
+        # Update the Q-value  
+        Q[current_state[0], current_state[1], actions.index(action)] = Q[current_state[0], current_state[1], actions.index(action)] + alpha * (reward + gamma * np.max(Q[next_state[0], next_state[1]]) - Q[current_state[0], current_state[1], actions.index(action)])
+        
+        if reward >= 100:
+            break
+        
+         # Update the state
+        current_state = next_state
+        
+# Generate 500 rollout traces
+rollout_traces = []
+actionnn = []
+for i in range(20):
+
+
+    current_state = (0, 0)
+    rollout = [current_state]
+    act = []
+    rob_goal = -1
+    while rob_goal < 0:
+        # print(current_state)
+        print(current_state)
+        action = actions[np.argmax(Q[current_state[0], current_state[1]])]
+        act.append(action)
+        next_state = state_transition(current_state,action)
+
+        rob_obs = robustness(spec_obs, next_state)
+        rob_goal = robustness(spec_goal, next_state)
+        
+        if rob_obs >=0:
+            next_state = current_state
+            
+        current_state = next_state
+        rollout.append(current_state)
+
+    actionnn.append(act)    
+    rollout_traces.append(rollout)
+    
+# Organize rollout traces into a dataset
+x_trace = []
+y_trace = []
+for i in range(len(rollout_traces)):
+    x_vals = []
+    y_vals = []
+    for j in rollout_traces[i]:
+        x_vals.append(j[0]+0.5)
+        y_vals.append(j[1]+0.5)
+    x_trace.append(x_vals)
+    y_trace.append(y_vals)
+# Display the grid environment with the rollout traces in black, goal position in green, and obstacle in red
+
+
+
+# fig = plt.figure()
+for i in range(len(rollout_traces)):
+    fig = plt.figure()
+    goal = matplotlib.patches.Rectangle((4,4), 2, 2, color='green')
+    obstacle1 = matplotlib.patches.Rectangle((1,2), 4, 1, color='black')
+    obstacle2 = matplotlib.patches.Rectangle((4,3), 1, 1, color='black')
+    ax = fig.add_subplot(111)
+    ax.add_patch(goal)
+    ax.add_patch(obstacle1)
+    ax.add_patch(obstacle2)
+    #plt.plot(x_trace[i],y_trace[i],'*-')
+    # plt.plot(x_trace[i],y_trace[i],'c*-')
+    # plt.grid()
+    # plt.show()
+plt.plot(x_trace[i],y_trace[i],'*-')
+plt.grid()    
+plt.show()
+
+
