@@ -20,11 +20,16 @@ spec_obs.declare_var('y', 'float')
 spec_goal.spec = 'x>=4 & y>=4' #specification representing the goal location
 spec_obs.spec = '(x>=1 & x < 5 & y >= 2 & y < 3) or (x > 3 & x <= 4 & y > 2 & y <= 3)' #specification representing the obstacle location
 
-def robustness(spec,current_state):
-    pos = {'time': [0,1], 'x': [current_state[0],0], 'y': [current_state[1],0]}
+def robustness(spec,current_state):  # Online Monitor
     spec.parse()
-    rob = spec.evaluate(pos)
-    return rob[0][1]
+    rob = spec.update(0, [('x', current_state[0]) , ('y', current_state[1])])
+    return rob
+
+# def robustness(spec,current_state): # Offline Monitor
+#     pos = {'time': [0,1], 'x': [current_state[0],0], 'y': [current_state[1],0]}
+#     spec.parse()
+#     rob = spec.evaluate(pos)
+#     return rob[0][1]
     
 def state_transition(current_state, action):
     
