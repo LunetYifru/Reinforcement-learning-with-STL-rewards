@@ -192,9 +192,9 @@ for i in range(len(rollout_traces)):
 
 
 
-fig = plt.figure()
+# fig = plt.figure()
 for i in range(len(rollout_traces)):
-    # fig = plt.figure()
+    fig = plt.figure()
     goal = matplotlib.patches.Rectangle((4,4), 2, 2, color='green')
     obstacle1 = matplotlib.patches.Rectangle((1,2), 4, 1, color='black')
     obstacle2 = matplotlib.patches.Rectangle((4,3), 1, 1, color='black')
@@ -203,13 +203,12 @@ for i in range(len(rollout_traces)):
     ax.add_patch(obstacle1)
     ax.add_patch(obstacle2)
     # plt.plot(x_trace[i],y_trace[i],'*-')
-    # plt.plot(x_trace[i],y_trace[i],'c*-')
-    # plt.grid()
-    # plt.show()
-plt.plot(x_trace[i],y_trace[i],'*-')
-plt.grid()    
-plt.show()
-
+    plt.plot(x_trace[i],y_trace[i],'c*-')
+    plt.grid()
+    plt.show()
+# plt.plot(x_trace[i],y_trace[i],'*-')
+# plt.grid()    
+# plt.show()
 
 
 
