@@ -15,17 +15,17 @@ phi4 = stl.Predicate('x') < 5
 phi5 = stl.Predicate('y') >= 2
 phi6 = stl.Predicate('y') < 3
 
-phi7 = stl.Predicate('x') > 3
-phi8 = stl.Predicate('x') <= 4
-phi9 = stl.Predicate('y') > 2
-phi10 = stl.Predicate('y') <= 3
+phi7 = stl.Predicate('x') >=4
+phi8 = stl.Predicate('x') <5
+phi9 = stl.Predicate('y') >=3 
+phi10 = stl.Predicate('y') <4
 
 
 phi_goal = phi1 & phi2
 phi_obs1 = phi3 & phi4 & phi5 & phi6 
 phi_obs2 = phi7 & phi8 & phi9 & phi10
-phi_obs = phi_obs1 & phi_obs2
-spec = (phi_goal) & stl.Not(phi_obs1) & stl.Not(phi_obs2)
+phi_obs = phi_obs1 | phi_obs2
+spec = (phi_goal) & stl.Not(phi_obs)
 print('STL :',spec)
 
 def signal(state):
@@ -51,7 +51,7 @@ def state_transition(current_state, action):
    
     
     num_states = len(states)
-    transition_probabilities = [0.9 if state == suggested_state else (0.1/(num_states-1)) for state in states]
+    transition_probabilities = [0.8 if state == suggested_state else (0.2/(num_states-1)) for state in states]
     next_state = random.choices(states,weights=transition_probabilities) 
     return next_state[0]
 
@@ -72,7 +72,7 @@ Q = np.zeros((grid_size, grid_size, len(actions)))
 alpha = 0.1
 gamma = 0.9
 epsilon = 0.9
-max_steps = 15
+max_steps = 10
 num_episodes = 1000
 ep = []
 reward = -10
@@ -151,8 +151,6 @@ print('here')
 rollout_traces = []
 actionnn = []
 for i in range(20):
-
-
     current_state = (0, 0)
     rollout = [current_state]
     act = []
@@ -204,6 +202,7 @@ for i in range(len(rollout_traces)):
     ax.add_patch(obstacle2)
     # plt.plot(x_trace[i],y_trace[i],'*-')
     plt.plot(x_trace[i],y_trace[i],'c*-')
+    plt.plot(x_trace[i][-1],y_trace[i][-1],'r*')
     plt.grid()
     plt.show()
 # plt.plot(x_trace[i],y_trace[i],'*-')
