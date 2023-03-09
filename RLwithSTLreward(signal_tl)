@@ -10,7 +10,7 @@ grid_size = 6
 phi1 = stl.Predicate('x')>= 4
 phi2 = stl.Predicate('y')>= 4 
 
-phi3 = stl.Predicate('x') >= 1
+phi3 = stl.Predicate('x') >= 2
 phi4 = stl.Predicate('x') < 5
 phi5 = stl.Predicate('y') >= 2
 phi6 = stl.Predicate('y') < 3
@@ -25,7 +25,7 @@ phi_goal = phi1 & phi2
 phi_obs1 = phi3 & phi4 & phi5 & phi6 
 phi_obs2 = phi7 & phi8 & phi9 & phi10
 phi_obs = phi_obs1 & phi_obs2
-spec = stl.Always ((phi_goal) & stl.Not(phi_obs1) & stl.Not(phi_obs2))
+spec = (phi_goal) & stl.Not(phi_obs1) & stl.Not(phi_obs2)
 print('STL :',spec)
 
 def signal(state):
@@ -51,7 +51,7 @@ def state_transition(current_state, action):
    
     
     num_states = len(states)
-    transition_probabilities = [0.8 if state == suggested_state else (0.2/(num_states-1)) for state in states]
+    transition_probabilities = [0.9 if state == suggested_state else (0.1/(num_states-1)) for state in states]
     next_state = random.choices(states,weights=transition_probabilities) 
     return next_state[0]
 
@@ -72,7 +72,7 @@ Q = np.zeros((grid_size, grid_size, len(actions)))
 alpha = 0.1
 gamma = 0.9
 epsilon = 0.9
-max_steps = 1000
+max_steps = 15
 num_episodes = 1000
 ep = []
 reward = -10
@@ -196,7 +196,7 @@ for i in range(len(rollout_traces)):
 for i in range(len(rollout_traces)):
     fig = plt.figure()
     goal = matplotlib.patches.Rectangle((4,4), 2, 2, color='green')
-    obstacle1 = matplotlib.patches.Rectangle((1,2), 4, 1, color='black')
+    obstacle1 = matplotlib.patches.Rectangle((2,2), 3, 1, color='black')
     obstacle2 = matplotlib.patches.Rectangle((4,3), 1, 1, color='black')
     ax = fig.add_subplot(111)
     ax.add_patch(goal)
