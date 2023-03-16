@@ -1,0 +1,215 @@
+import numpy as np
+import random
+import matplotlib.pyplot as plt
+import matplotlib
+
+import signal_tl as stl
+
+grid_size = 6
+
+phi1 = stl.Predicate('x')>= 4
+phi2 = stl.Predicate('y')>= 4 
+
+phi3 = stl.Predicate('x') >= 2
+phi4 = stl.Predicate('x') < 5
+phi5 = stl.Predicate('y') >= 2
+phi6 = stl.Predicate('y') < 3
+
+phi7 = stl.Predicate('x') >=4
+phi8 = stl.Predicate('x') <5
+phi9 = stl.Predicate('y') >=3 
+phi10 = stl.Predicate('y') <4
+
+
+phi_goal = phi1 & phi2
+phi_obs1 = phi3 & phi4 & phi5 & phi6 
+phi_obs2 = phi7 & phi8 & phi9 & phi10
+phi_obs = phi_obs1 | phi_obs2
+spec = (phi_goal) & stl.Not(phi_obs)
+print('STL :',spec)
+
+def signal(state):
+    t = [1]        
+    x = [state[0]]
+    y = [state[1]]
+    signals = {'x' : stl.Signal(x,t) ,'y': stl.Signal(y,t)}
+    return signals
+
+def state_transition(current_state, action):
+    
+    if action == (0,-1):#down
+        suggested_state = (current_state[0] + action[0], max(0,current_state[1] + action[1]))
+    elif action == (0,1):#up
+        suggested_state = (current_state[0] + action[0], min(5,current_state[1] + action[1]))
+    elif action ==(-1,0):#left
+        suggested_state = (max(0,current_state[0] + action[0]), current_state[1] + action[1])
+    elif action == (1,0):#right
+        suggested_state = (min(5,current_state[0] + action[0]), current_state[1] + action[1])
+    
+    # up, down,right, left
+    states = [(current_state[0] + 0, min(5,current_state[1] + 1)), (current_state[0] + 0, max(0,current_state[1]  - 1)), ((min(5,current_state[0] + 1), current_state[1] + 0)) ,(max(0,current_state[0] -1), current_state[1] + 0)]
+   
+    
+    num_states = len(states)
+    transition_probabilities = [0.8 if state == suggested_state else (0.2/(num_states-1)) for state in states]
+    next_state = random.choices(states,weights=transition_probabilities) 
+    return next_state[0]
+
+
+
+# Define the environment
+# grid_size = 6
+# obstacles = [(2, 2),(2,3),(3,2),(3,3)]
+# goals = [(5,5), (4,4), (4,5), (5,4)]
+
+# Define the actions
+actions = [(0, 1), (0, -1), (1, 0), (-1, 0)]  # up, down,right, left
+
+# Initialize Q-table
+Q = np.zeros((grid_size, grid_size, len(actions)))
+
+# Define the training parameters
+alpha = 0.1
+gamma = 0.9
+epsilon = 0.9
+max_steps = 10
+num_episodes = 10000
+er = []
+reward = -10
+
+# Train the agent
+for episode in range(num_episodes):
+
+    # Initialize the state
+    current_state = (0,0)
+    epsilon = np.exp(-0.005*episode)
+    episode_reward = 0
+
+    # Terminate the episode if the agent reaches the goal or the maximum number of steps is reached
+    for step in range(max_steps):
+      
+
+        # Choose an action using epsilon-greedy exploration
+        if random.uniform(0, 1) < epsilon: #explore
+            action = random.choice(actions)
+        else:
+            action = actions[np.argmax(Q[current_state[0], current_state[1]])] #exploit
+         
+            
+         
+        # Determine the next state following the transition probablities
+        
+        next_state = state_transition(current_state,action)
+        
+        # if next_state in obstacles:
+        #     reward = -100
+        #     next_state = current_state
+        # elif next_state in goals:
+        #     reward = 100
+        # else:
+        #     reward = -1
+        
+        ################### STL Rewrad ##################
+        signals = signal(next_state)
+        rob_goal = stl.compute_robustness(phi_goal,signals)
+        rob_obs = stl.compute_robustness(phi_obs,signals)
+        rob = stl.compute_robustness(spec,signals)
+        
+        if rob_obs.at(0) >=0:
+            reward = rob.at(0) -100
+            next_state = current_state
+        elif rob_goal.at(0) >=0:
+            reward = rob.at(0) + 100
+        else:
+            reward = rob.at(0)
+        
+        # using obstacles and goal location
+        
+        
+        # if next_state in obstacles:
+        #     reward = rob.at(0) -100
+        #     next_state = current_state
+        # elif next_state in goals:
+        #     reward = rob.at(0) +100
+        # else:
+        #     reward = rob.at(0)
+        
+        # reward = rob.at(0)
+        episode_reward+= reward         
+        # Update the Q-value  
+        # Q[current_state[0], current_state[1], actions.index(action)] = Q[current_state[0], current_state[1], actions.index(action)] + alpha * (reward + gamma * np.max(Q[next_state[0], next_state[1]]) - Q[current_state[0], current_state[1], actions.index(action)])
+        
+        # Update the state
+        current_state = next_state
+        if reward >= 100:
+            break
+    er.append(episode_reward)
+    # Update the Q-values at the end of the episode using the cumulative episode reward
+    Q[current_state[0], current_state[1], actions.index(action)] = Q[current_state[0], current_state[1], actions.index(action)] + alpha * (episode_reward - Q[current_state[0], current_state[1], actions.index(action)])
+
+
+print('here')        
+# Generate 500 rollout traces
+rollout_traces = []
+actionnn = []
+for i in range(20):
+    current_state = (0, 0)
+    rollout = [current_state]
+    act = []
+    rob_goal = -1
+    while rob_goal < 0:
+        print(current_state)
+        action = actions[np.argmax(Q[current_state[0], current_state[1]])]
+        act.append(action)
+        next_state = state_transition(current_state,action)
+
+        signals = signal(next_state)
+        rob_obs = (stl.compute_robustness(phi_obs,signals)).at(0)
+        rob_goal = (stl.compute_robustness(phi_goal,signals)).at(0)
+        
+        if rob_obs >=0:
+            next_state = current_state
+            
+        current_state = next_state
+        rollout.append(current_state)
+
+    actionnn.append(act)    
+    rollout_traces.append(rollout)
+    
+# Organize rollout traces into a dataset
+x_trace = []
+y_trace = []
+for i in range(len(rollout_traces)):
+    x_vals = []
+    y_vals = []
+    for j in rollout_traces[i]:
+        x_vals.append(j[0]+0.5)
+        y_vals.append(j[1]+0.5)
+    x_trace.append(x_vals)
+    y_trace.append(y_vals)
+# Display the grid environment with the rollout traces in black, goal position in green, and obstacle in red
+
+
+
+# fig = plt.figure()
+for i in range(len(rollout_traces)):
+    fig = plt.figure()
+    goal = matplotlib.patches.Rectangle((4,4), 2, 2, color='green')
+    obstacle1 = matplotlib.patches.Rectangle((2,2), 3, 1, color='black')
+    obstacle2 = matplotlib.patches.Rectangle((4,3), 1, 1, color='black')
+    ax = fig.add_subplot(111)
+    ax.add_patch(goal)
+    ax.add_patch(obstacle1)
+    ax.add_patch(obstacle2)
+    # plt.plot(x_trace[i],y_trace[i],'*-')
+    plt.plot(x_trace[i],y_trace[i],'c*-')
+    plt.plot(x_trace[i][-1],y_trace[i][-1],'r*')
+    plt.grid()
+    plt.show()
+# plt.plot(x_trace[i],y_trace[i],'*-')
+# plt.grid()    
+# plt.show()
+
+
+
+
