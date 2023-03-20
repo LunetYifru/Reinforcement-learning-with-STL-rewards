@@ -199,7 +199,7 @@ for i in range(len(rollout_traces)):
     plt.plot(x_trace[i],y_trace[i],'c*-')
     plt.grid()
     plt.show()
-    print(actionnn[i])
+    #print(actionnn[i])
 #plt.plot(x_trace[i],y_trace[i],'*-')
 #plt.grid()    
 #plt.show()
