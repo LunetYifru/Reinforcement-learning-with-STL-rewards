@@ -16,7 +16,7 @@ grid_size = 6
 
 def specification(spec_str):
     spec = rtamt.StlDenseTimeSpecification()
-    spec.name = 'STL discrete-time online Python monitor'
+    spec.name = 'STL dense-time online monitor'
     spec.declare_var('x', 'float')
     spec.declare_var('y', 'float')
     spec.spec = spec_str
@@ -26,6 +26,15 @@ def specification(spec_str):
 def robustness(dataset, spec):
     rob = spec.evaluate(['x',dataset[0]],['y',dataset[1]])
     return [i[1] for i in rob]
+
+def robustness_cs(spec_str,current_state):  # Online Monitor
+    spec = rtamt.StlDiscreteTimeSpecification()
+    spec.declare_var('x', 'float')
+    spec.declare_var('y', 'float')
+    spec.spec = spec_str
+    spec.parse()
+    rob = spec.update(0, [('x', current_state[0]) , ('y', current_state[1])])
+    return rob
 
 # stl initialize
 spec_goal = specification('x>=4 & y>=4') #specification representing the goal location
@@ -71,7 +80,7 @@ def state_transition(current_state, action):
    
     
     num_states = len(states)
-    transition_probabilities = [0.8 if state == suggested_state else (0.2/(num_states-1)) for state in states]
+    transition_probabilities = [0.9 if state == suggested_state else (0.1/(num_states-1)) for state in states]
     next_state = random.choices(states,weights=transition_probabilities) 
     return next_state[0]
 
@@ -83,12 +92,12 @@ actions = [(0, 1), (0, -1), (1, 0), (-1, 0)]  # up, down,right, left
 Q = np.zeros((grid_size, grid_size, len(actions)))
 
 # Define the training parameters
-alpha = 0.1
+alpha = 0.6
 gamma = 0.9
 epsilon = 0.9
-max_steps = 20
+max_steps = 30
 num_episodes = 10000
-decay_rate = -0.005
+decay_rate = -0.00025
 er = []
 # Train the agent
 for episode in range(num_episodes):
@@ -128,7 +137,6 @@ for episode in range(num_episodes):
    
     if rob_obs >=0:
         reward = rob -100
-        next_state = current_state
     elif rob_goal >=0:
         reward = rob + 100
     else:
@@ -151,8 +159,9 @@ for i in range(20):
     rollout = [current_state]
     rob_goal = -1
     act = []
-    for k in range(20):
-#    while rob_goal < 0:
+    st = 0
+    #for k in range(30):
+    while rob_goal < 0 and st <30:
         # print(current_state)
         print(current_state)
         action = actions[np.argmax(Q[current_state[0], current_state[1]])]
@@ -160,13 +169,14 @@ for i in range(20):
         next_state = state_transition(current_state,action)
 #
 #        rob_obs = robustness(spec_obs, next_state)
-#        rob_goal = robustness(spec_goal, next_state)
+        rob_goal = robustness_cs('x>=4 & y>=4', next_state)
         
 #        if rob_obs >=0:
 #            next_state = current_state
             
         current_state = next_state
         rollout.append(current_state)
+        st+=1
     actionnn.append(act)
     rollout_traces.append(rollout)
     
@@ -199,7 +209,7 @@ for i in range(len(rollout_traces)):
     plt.plot(x_trace[i],y_trace[i],'c*-')
     plt.grid()
     plt.show()
-    #print(actionnn[i])
+    print(actionnn[i])
 #plt.plot(x_trace[i],y_trace[i],'*-')
 #plt.grid()    
 #plt.show()
