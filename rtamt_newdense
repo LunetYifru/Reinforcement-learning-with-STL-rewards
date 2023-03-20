@@ -93,11 +93,10 @@ er = []
 # Train the agent
 for episode in range(num_episodes):
     print(episode)
-    sts = []
     # Initialize the state
     current_state = (0,0)
     epsilon = np.exp(-0.005*episode)
-    sts.append(current_state)
+    states_actions = []
     # Terminate the episode if the agent reaches the goal or the maximum number of steps is reached
     for step in range(max_steps):
         # Choose an action using epsilon-greedy exploration
@@ -109,21 +108,18 @@ for episode in range(num_episodes):
         # Determine the next state following the transition probablities        
         next_state = state_transition(current_state,action)
         
-        # Update the Q-value  
-#        Q[current_state[0], current_state[1], actions.index(action)] = Q[current_state[0], current_state[1], actions.index(action)] + alpha * (reward + gamma * np.max(Q[next_state[0], next_state[1]]) - Q[current_state[0], current_state[1], actions.index(action)])
+        # Store the current state and action
+        states_actions.append((current_state, action))
         
         # Update the state
         current_state = next_state
-#        if reward >= 100:
-#            break
-        sts.append(current_state)
             
     ################### STL Rewrad ##################
     x_tr = []
     y_tr = []
-    for i in range(len(sts)):
-        x_tr.append([i,sts[i][0]])
-        y_tr.append([i,sts[i][1]])
+    for i in range(len(states_actions)):
+        x_tr.append([i,states_actions[i][0][0]])
+        y_tr.append([i,states_actions[i][0][1]])
         
     dataset = (x_tr,y_tr)
     rob = max(robustness(dataset, spec))
@@ -139,8 +135,11 @@ for episode in range(num_episodes):
         reward = rob
 #    print(sts)
 #    print(reward)
+    
     # Update the Q-values at the end of the episode using the cumulative episode reward
-    Q[current_state[0], current_state[1], actions.index(action)] = Q[current_state[0], current_state[1], actions.index(action)] + alpha * (reward - Q[current_state[0], current_state[1], actions.index(action)])
+    for (state, action) in states_actions:
+        Q[state[0], state[1], actions.index(action)] = Q[state[0], state[1], actions.index(action)] + alpha * (reward - Q[state[0], state[1], actions.index(action)])
+
 
 
         
@@ -204,5 +203,4 @@ for i in range(len(rollout_traces)):
 #plt.plot(x_trace[i],y_trace[i],'*-')
 #plt.grid()    
 #plt.show()
-
 
