@@ -37,12 +37,9 @@ def robustness_cs(spec_str,current_state):  # Online Monitor
     return rob
 
 # stl initialize
-spec_goal = specification('x>=4 & y>=4') #specification representing the goal location
-
-spec_obs = specification('(x>=2 & x < 5 & y >= 2 & y < 3) or (x > 3 & x <= 4 & y > 2 & y <= 3)') #specification representing the obstacle location
-
-
-spec = specification('(x>=4 & y>=4) and ((x>=2 & x < 5 & y >= 2 & y < 3) or (x > 3 & x <= 4 & y > 2 & y <= 3))')
+spec_goal = specification('F(x>=4 & y>=4)') #specification representing the goal location
+spec_obs = specification('F((x>=2 & x < 5 & y >= 2 & y < 3) or (x > 3 & x <= 4 & y > 2 & y <= 3))') #specification representing the obstacle location
+spec = specification('G(F(x>=4 & y>=4) and (not(F((x>=2 & x < 5 & y >= 2 & y < 3) or (x > 3 & x <= 4 & y > 2 & y <= 3)))))')
     
 def state_transition(current_state, action):
     if action == (0,-1):#down
@@ -53,27 +50,7 @@ def state_transition(current_state, action):
         suggested_state = (max(0,current_state[0] + action[0]), current_state[1] + action[1])
     elif action == (1,0):#right
         suggested_state = (min(5,current_state[0] + action[0]), current_state[1] + action[1])
-#    
-#    if action == (0,-1):#down
-#        if (current_state[1] + action[1])<0:
-#            suggested_state = (current_state[0] + action[0],current_state[1] + -action[1])
-#        else:
-#            suggested_state = (current_state[0] + action[0],current_state[1] + action[1])
-#    elif action == (0,1):#up
-#        if (current_state[1] + action[1])>5:
-#            suggested_state = (current_state[0] + action[0],current_state[1] + -action[1])
-#        else:
-#            suggested_state = (current_state[0] + action[0],current_state[1] + action[1])
-#    elif action ==(-1,0):#left
-#        if (current_state[0] + action[0])<0:
-#            suggested_state = (current_state[0] - action[0],current_state[1] + action[1])
-#        else:
-#            suggested_state = (current_state[0] + action[0],current_state[1] + action[1])
-#    elif action == (1,0):#right
-#        if (current_state[0] + action[0])>5:
-#            suggested_state = (current_state[0] + -action[0],current_state[1] + action[1])
-#        else:
-#            suggested_state = (current_state[0] + action[0],current_state[1] + action[1])
+    
 #    
     # up, down,right, left
     states = [(current_state[0] + 0, min(5,current_state[1] + 1)), (current_state[0] + 0, max(0,current_state[1]  - 1)), ((min(5,current_state[0] + 1), current_state[1] + 0)) ,(max(0,current_state[0] -1), current_state[1] + 0)]
@@ -92,12 +69,12 @@ actions = [(0, 1), (0, -1), (1, 0), (-1, 0)]  # up, down,right, left
 Q = np.zeros((grid_size, grid_size, len(actions)))
 
 # Define the training parameters
-alpha = 0.6
+alpha = 0.4
 gamma = 0.9
 epsilon = 0.9
 max_steps = 30
 num_episodes = 10000
-decay_rate = -0.00025
+decay_rate = -0.0002
 er = []
 # Train the agent
 for episode in range(num_episodes):
@@ -131,23 +108,27 @@ for episode in range(num_episodes):
         y_tr.append([i,states_actions[i][0][1]])
         
     dataset = (x_tr,y_tr)
-    rob = max(robustness(dataset, spec))
-    rob_goal = max(robustness(dataset, spec_goal))
-    rob_obs = max(robustness(dataset, spec_obs))
+    rob = robustness(dataset, spec)[0]
+    rob_goal = robustness(dataset, spec_goal)[0]
+    rob_obs = robustness(dataset, spec_obs)[0]
    
-    if rob_obs >=0:
-        reward = rob -100
-    elif rob_goal >=0:
+    if rob_obs >=0 and rob_goal >=0:
+        reward = rob -50
+    elif rob_obs <0 and rob_goal >=0:
         reward = rob + 100
+    elif rob_obs >=0 and rob_goal <0:
+        reward = rob -100
     else:
         reward = rob
+        
+    print(rob_goal, rob_obs, rob, reward)
 #    print(sts)
 #    print(reward)
     
     # Update the Q-values at the end of the episode using the cumulative episode reward
-    for (state, action) in states_actions:
-        Q[state[0], state[1], actions.index(action)] = Q[state[0], state[1], actions.index(action)] + alpha * (reward - Q[state[0], state[1], actions.index(action)])
-
+    for i, (state, action) in enumerate(states_actions):
+#       Q[state[0], state[1], actions.index(action)] = Q[state[0], state[1], actions.index(action)] + alpha * (reward - Q[state[0], state[1], actions.index(action)])
+        Q[state[0], state[1], actions.index(action)] += alpha * (reward + gamma * np.max(Q[states_actions[i+1 if i<len(states_actions)-1 else i][0][0], states_actions[i+1 if i<len(states_actions)-1 else i][0][1], :]) - Q[state[0], state[1], actions.index(action)])
 
 
         
