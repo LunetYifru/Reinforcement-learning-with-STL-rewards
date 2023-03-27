@@ -168,30 +168,34 @@ for i in range(len(rollout_traces)):
     x_vals = []
     y_vals = []
     for j in rollout_traces[i]:
-        x_vals.append(j[0]+0.5)
-        y_vals.append(j[1]+0.5)
+        x_vals.append(j[0])
+        y_vals.append(j[1])
     x_trace.append(x_vals)
     y_trace.append(y_vals)
 # Display the grid environment with the rollout traces in black, goal position in green, and obstacle in red
+x_trace = pd.DataFrame(x_trace).T
+y_trace = pd.DataFrame(y_trace).T
 
-
-
+x_plt = []
+y_plt = []
 # fig = plt.figure()
+for i in range(len(x_trace.columns)):
+    x_plt.append([j+0.5 for j in x_trace[i]])
+    y_plt.append([j+0.5 for j in y_trace[i]])
+
 for i in range(len(rollout_traces)):
     fig = plt.figure()
     goal = matplotlib.patches.Rectangle((4,4), 2, 2, color='green')
-    obstacle1 = matplotlib.patches.Rectangle((2,2), 3, 1, color='black')
+    obstacle1 = matplotlib.patches.Rectangle((1,2), 4, 1, color='black')
     obstacle2 = matplotlib.patches.Rectangle((4,3), 1, 1, color='black')
     ax = fig.add_subplot(111)
     ax.add_patch(goal)
     ax.add_patch(obstacle1)
     ax.add_patch(obstacle2)
-    plt.plot(x_trace[i],y_trace[i],'*-')
-    plt.plot(x_trace[i],y_trace[i],'c*-')
+#    plt.plot(x_plt[i],y_plt[i],'*-')
+    plt.plot(x_plt[i],y_plt[i],'c*-')
     plt.grid()
     plt.show()
-    print(actionnn[i])
 #plt.plot(x_trace[i],y_trace[i],'*-')
 #plt.grid()    
 #plt.show()
-
