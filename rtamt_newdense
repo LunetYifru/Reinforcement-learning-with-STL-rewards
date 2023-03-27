@@ -7,6 +7,7 @@ Created on Sun Mar 19 15:03:00 2023
 """
 
 import numpy as np
+import pandas as pd
 import random
 import matplotlib.pyplot as plt
 import matplotlib
@@ -45,15 +46,15 @@ def state_transition(current_state, action):
     if action == (0,-1):#down
         suggested_state = (current_state[0] + action[0], max(0,current_state[1] + action[1]))
     elif action == (0,1):#up
-        suggested_state = (current_state[0] + action[0], min(5,current_state[1] + action[1]))
+        suggested_state = (current_state[0] + action[0], min(grid_size-1,current_state[1] + action[1]))
     elif action ==(-1,0):#left
         suggested_state = (max(0,current_state[0] + action[0]), current_state[1] + action[1])
     elif action == (1,0):#right
-        suggested_state = (min(5,current_state[0] + action[0]), current_state[1] + action[1])
+        suggested_state = (min(grid_size-1,current_state[0] + action[0]), current_state[1] + action[1])
     
 #    
     # up, down,right, left
-    states = [(current_state[0] + 0, min(5,current_state[1] + 1)), (current_state[0] + 0, max(0,current_state[1]  - 1)), ((min(5,current_state[0] + 1), current_state[1] + 0)) ,(max(0,current_state[0] -1), current_state[1] + 0)]
+    states = [(current_state[0] + 0, min(grid_size-1,current_state[1] + 1)), (current_state[0] + 0, max(0,current_state[1]  - 1)), ((min(grid_size-1,current_state[0] + 1), current_state[1] + 0)) ,(max(0,current_state[0] -1), current_state[1] + 0)]
    
     
     num_states = len(states)
@@ -69,8 +70,8 @@ actions = [(0, 1), (0, -1), (1, 0), (-1, 0)]  # up, down,right, left
 Q = np.zeros((grid_size, grid_size, len(actions)))
 
 # Define the training parameters
-alpha = 0.4
-gamma = 0.9
+alpha = 0.5
+gamma = 0.8
 epsilon = 0.9
 max_steps = 30
 num_episodes = 10000
