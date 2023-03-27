@@ -114,13 +114,13 @@ for episode in range(num_episodes):
     rob_obs = robustness(dataset, spec_obs)[0]
    
     if rob_obs >=0 and rob_goal >=0:
-        reward = rob -50
+        reward = rob
     elif rob_obs <0 and rob_goal >=0:
         reward = rob + 100
     elif rob_obs >=0 and rob_goal <0:
         reward = rob -100
-    else:
-        reward = rob
+    elif rob_obs <0 and rob_goal <0:
+        reward = rob -50
         
     print(rob_goal, rob_obs, rob, reward)
 #    print(sts)
@@ -187,7 +187,7 @@ for i in range(len(x_trace.columns)):
 for i in range(len(rollout_traces)):
     fig = plt.figure()
     goal = matplotlib.patches.Rectangle((4,4), 2, 2, color='green')
-    obstacle1 = matplotlib.patches.Rectangle((1,2), 4, 1, color='black')
+    obstacle1 = matplotlib.patches.Rectangle((2,2), 3, 1, color='black')
     obstacle2 = matplotlib.patches.Rectangle((4,3), 1, 1, color='black')
     ax = fig.add_subplot(111)
     ax.add_patch(goal)
